@@ -15,7 +15,11 @@ import {
     GET_ARTIST_ENDPOINT,
     GET_TRACK_ENDPOINT,
 } from "./endpoints";
-import type { GetTrackByIdType } from "./spotify.routes";
+import type {
+    GetAlbumByIdType,
+    GetArtistByIdType,
+    GetTrackByIdType,
+} from "./spotify.routes";
 import type { Album, Artist, Track } from "./types";
 
 export const getTrackById: AppRouteHandler<GetTrackByIdType> = async (c) => {
@@ -180,4 +184,86 @@ export const getTrackById: AppRouteHandler<GetTrackByIdType> = async (c) => {
 
         return c.json(newTrack, HttpStatusCodes.OK);
     });
+};
+
+export const getAlbumById: AppRouteHandler<GetAlbumByIdType> = async (c) => {
+    const { id } = c.req.valid("param");
+    const existingAlbum = await db.query.album.findFirst({
+        where: (album, { eq }) => eq(album.spotifyId, id),
+    });
+    if (existingAlbum) return c.json(existingAlbum, HttpStatusCodes.OK);
+
+    const spotifyAlbum = await axios
+        .get(`${GET_ALBUM_ENDPOINT}/${id}`, {
+            headers: {
+                Authorization: `Bearer ${c.get("spotifyToken")}`,
+            },
+        })
+        .then((res) => res.data as Album);
+
+    const newAlbum = await db.transaction((tx) =>
+        tx
+            .insert(album)
+            .values({
+                albumImage: spotifyAlbum.images[0].url,
+                albumImageHeight: spotifyAlbum.images[0].height,
+                albumImageWidth: spotifyAlbum.images[0].width,
+                label: spotifyAlbum.label,
+                releaseDate: spotifyAlbum.release_date,
+                releaseDatePrecision: spotifyAlbum.release_date_precision,
+                spotifyId: spotifyAlbum.id,
+                uri: spotifyAlbum.uri,
+                genres: spotifyAlbum.genres,
+                name: spotifyAlbum.name,
+                popularity: spotifyAlbum.popularity,
+                totalTracks: spotifyAlbum.total_tracks,
+                type: spotifyAlbum.type,
+            } as typeof album.$inferInsert)
+            .returning()
+            .then(
+                takeOneOrThrow(
+                    "failed to insert a single entry into the album table"
+                )
+            )
+    );
+    return c.json(newAlbum, HttpStatusCodes.OK);
+};
+
+export const getArtistById: AppRouteHandler<GetArtistByIdType> = async (c) => {
+    const { id } = c.req.valid("param");
+    const existingArtist = await db.query.artist.findFirst({
+        where: (artist, { eq }) => eq(artist.spotifyId, id),
+    });
+    if (existingArtist) return c.json(existingArtist, HttpStatusCodes.OK);
+
+    const spotifyArtist = await axios
+        .get(`${GET_ARTIST_ENDPOINT}/${artist.id}`, {
+            headers: {
+                Authorization: `Bearer ${c.get("spotifyToken")}`,
+            },
+        })
+        .then((res) => res.data as Artist);
+    const newArtist = await db.transaction((tx) =>
+        tx
+            .insert(artist)
+            .values({
+                href: spotifyArtist.href,
+                spotifyId: spotifyArtist.id,
+                artistImage: spotifyArtist.images[0].url,
+                artistImageHeight: spotifyArtist.images[0].height,
+                artistImageWidth: spotifyArtist.images[0].width,
+                genres: spotifyArtist.genres,
+                name: spotifyArtist.name,
+                popularity: spotifyArtist.popularity,
+                uri: spotifyArtist.uri,
+                type: spotifyArtist.type,
+            } as typeof artist.$inferInsert)
+            .returning()
+            .then(
+                takeOneOrThrow(
+                    "failed to insert a single entry into the artist table"
+                )
+            )
+    );
+    return c.json(newArtist, HttpStatusCodes.OK);
 };

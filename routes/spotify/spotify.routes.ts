@@ -23,14 +23,15 @@ export const getTrackById = createRoute({
         ),
         [HttpStatusCodes.NOT_FOUND]: jsonContent(
             notFoundSchema,
-            "article not found"
+            "spotify track not found"
         ),
         [HttpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
             createErrorSchema(IdParamsSchema),
-            "Invalid id error"
+            "Invalid spotify track id error"
         ),
     },
 });
+
 export const getAlbumById = createRoute({
     path: "/spotify/album/{id}",
     method: "get",
@@ -42,16 +43,18 @@ export const getAlbumById = createRoute({
     },
     responses: {
         [HttpStatusCodes.OK]: jsonContent(
-            createSelectSchema(album),
-            "spotify track"
+            createSelectSchema(album, {
+                genres: z.array(z.string()),
+            }),
+            "spotify album"
         ),
         [HttpStatusCodes.NOT_FOUND]: jsonContent(
             notFoundSchema,
-            "article not found"
+            "spotify album not found"
         ),
         [HttpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
             createErrorSchema(IdParamsSchema),
-            "Invalid id error"
+            "Invalid spotify album id error"
         ),
     },
 });
@@ -66,16 +69,18 @@ export const getArtistById = createRoute({
     },
     responses: {
         [HttpStatusCodes.OK]: jsonContent(
-            createSelectSchema(artist),
+            createSelectSchema(artist, {
+                genres: z.array(z.string()),
+            }),
             "spotify track"
         ),
         [HttpStatusCodes.NOT_FOUND]: jsonContent(
             notFoundSchema,
-            "article not found"
+            "spotify artist not found"
         ),
         [HttpStatusCodes.UNPROCESSABLE_ENTITY]: jsonContent(
             createErrorSchema(IdParamsSchema),
-            "Invalid id error"
+            "Invalid spotify artist id error"
         ),
     },
 });

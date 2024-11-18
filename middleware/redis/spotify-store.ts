@@ -10,8 +10,10 @@ export const spotifyApi = createMiddleware<AppBindings>(async (c, next) => {
     if (c.get("spotifyToken")) return await next();
 
     const redisClient = await redis();
+    const logger = c.get("logger");
     let spotifyToken = await redisClient.get<string>(SPOTIFY_TOKEN);
     if (!spotifyToken) {
+        logger.debug("Re-retrieving spotify api token");
         spotifyToken = await axios
             .post(
                 "https://accounts.spotify.com/api/token",
